@@ -1,6 +1,6 @@
 # Beijing Air Pollution Index time seires modeling
 
-> Hi there! I am Jace. This was my final project of `Statistical Computation` that scored 95/100. It's taught by [Professor Feng Li](https://feng.li/) when I major *Applied Statistics* at Central University of Finance and Economics(CUFE) in 2018 fall.
+> Hi there! I am Jace. This was my final project of `Statistical Computation` that scored 95/100. It's taught by [Professor Feng Li](https://feng.li/) when I major *Applied Statistics* at Central University of Finance and Economics(CUFE) in 2019 spring.
 
 All details were originally written in [report_Chinese.pdf](report_Chinese.pdf), and translated(but curtailed) in [report_English.pdf](report_English.pdf)
 
