@@ -48,6 +48,9 @@ devtools::install_github("rstudio/tensorflow")
 library(keras)
 library(tensorflow)
 
+# - GARCH
+library(rugarch)
+
 ### 2. Data input and cleaning
 ## 2.1 Web scrapping
 # Build website series
@@ -721,3 +724,57 @@ ggplot(data=Vs_LSTM[366:1094, ], aes(x=Date)) +
                  " MAPE = ", round(100*mape_lstm, 2), "%", 
                  " MSE = ", round(mse_lstm, 2))) +
   theme(plot.title = element_text(face="bold", hjust = 0.5))
+
+
+### GARCH and Auto-regressive
+
+## GARCH
+spec <- ugarchspec(variance.model = list(model = "sGARCH", 
+                                         garchOrder = c(1, 1), 
+                                         submodel = NULL, 
+                                         external.regressors = NULL, 
+                                         variance.targeting = FALSE), 
+                   
+                   mean.model     = list(armaOrder = c(1, 1), 
+                                         external.regressors = NULL, 
+                                         distribution.model = "norm", 
+                                         start.pars = list(), 
+                                         fixed.pars = list()))
+
+garch <- ugarchfit(spec = spec, data = plt, solver.control = list(trace=0))
+garch_fixed_spec
+
+## simulate one path
+T <- 1095
+set.seed(42)
+path_garch <- ugarchpath(garch_fixed_spec, n.sim = T)
+str(path_garch@path$seriesSim)
+
+## loop
+estim_coeffs_vs_T <- error_coeffs_vs_T <- NULL
+T_sweep <- ceiling(seq(1000, T, length.out = 7))
+for (T_ in T_sweep) {
+  garch_fit <- ugarchfit(spec = garch_spec, data = synth_log_returns[1:T_])
+  error_coeffs_vs_T <- rbind(error_coeffs_vs_T, abs((coef(garch_fit) - true_params)/true_params))
+  estim_coeffs_vs_T <- rbind(estim_coeffs_vs_T, coef(garch_fit))
+}
+rownames(error_coeffs_vs_T) <- rownames(estim_coeffs_vs_T) <- paste("T =", T_sweep)
+
+## plots
+matplot(T_sweep, 100*error_coeffs_vs_T, 
+        main = "Relative error in estimated GARCH coefficients", 
+        xlab = "T", ylab = "error (%)",
+        type = "b", pch = 20, col = rainbow(5), ylim=c(-10,250))
+legend("topright", inset = 0.01, legend = colnames(error_coeffs_vs_T), pch = 20, col = rainbow(5))
+
+# forecast log-returns along the whole out-of-sample
+garch_fore <- ugarchforecast(plt, n.ahead = 1, n.roll = out_of_sample-1)
+forecast_log_returns <- xts(garch_fore@forecast$seriesFor[1, ], dates_out_of_sample)
+forecast_volatility <- xts(garch_fore@forecast$sigmaFor[1, ], dates_out_of_sample)
+
+# plot of log-returns
+plot(cbind("fitted"   = fitted(plt),
+           "forecast" = forecast_log_returns,
+           "original" = synth_log_returns), 
+     col = c("blue", "red", "black"), lwd = c(0.5, 0.5, 2),
+     main = "Forecast of synthetic log-returns", legend.loc = "topleft")
